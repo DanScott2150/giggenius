@@ -1,124 +1,61 @@
 <template>
 
-  <header>
-    <h1>GigGeniusAI</h1>
-    <div>
-      <ul>
-        <li>Log In</li>
-        <li>Sign Up</li>
-      </ul>
-      <img src="./assets/logo.png" alt="App Logo" />
-    </div>
-  </header>
+  <v-app>
 
-  <div class="page-content">
+    <v-app-bar app height="100">
+      <v-toolbar color="white" class="px-5">
 
-    <nav class="nav-menu">
-      <router-link to="/" class="tab" active-class="active-tab">Job Feed</router-link>
-      <router-link to="/generate-proposal" class="tab" active-class="active-tab">Generate Proposal</router-link>
-    </nav>
+        <v-toolbar-title>
+          <div class="d-flex align-center">
+            <v-avatar size="80">
+              <v-img src="..\src\assets\logo.png" alt="GigGenius Logo"></v-img>
+            </v-avatar>
+            <h2 class="pl-5" style="font-size:42px; letter-spacing:2px;">GigGenius</h2>
+          </div>
+        </v-toolbar-title>
 
-    <main>
-      <div class="content-container">
+        <div style="font-size: 20px; margin-right:4em; color:darkgray">
+          Login&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;Sign up
+        </div>
+
+        <v-avatar color="grey" class="mr-5">
+          <v-icon icon="mdi-account-circle"></v-icon>
+        </v-avatar>
+
+      </v-toolbar>
+    </v-app-bar>
+
+    <v-navigation-drawer width="275">
+
+      <v-list class="py-5 px-3">
+
+        <router-link to="/" class="nav-item" active-class="active-tab">
+          <v-list-item link title="Current Job Feed" prepend-icon="mdi-format-list-bulleted"></v-list-item>
+        </router-link>
+        <router-link to="/all-jobs">
+          <v-list-item link title="View All Jobs" prepend-icon="mdi-briefcase-outline"></v-list-item>
+        </router-link>
+        <router-link to="/generate-proposal">
+          <v-list-item link title="Generate Proposal" prepend-icon="mdi-pencil-outline"></v-list-item>
+        </router-link>
+
+        <div class="py-5">
+          <v-divider></v-divider>
+        </div>
+
+        <router-link to="/settings">
+          <v-list-item link title="Settings" prepend-icon="mdi-cogs"></v-list-item>
+        </router-link>
+      </v-list>
+
+    </v-navigation-drawer>
+
+    <v-main>
+      <div class="py-5 px-10">
         <router-view></router-view>
       </div>
-    </main>
+    </v-main>
 
-  </div>
+  </v-app>
 
 </template>
-
-
-<style scoped>
-
-  header {
-    position: relative;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 20px 60px;
-    box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.5);
-    background-color: #fff;
-    max-height: 80px;
-  }
-
-  header div{
-    display: flex;
-    align-items: center;
-  }
-
-  header ul{
-    display: flex;
-    margin-right: 50px;
-    font-size: 28px;
-    border-right: 1px solid #afb1b2;
-  }
-
-  header ul li{
-    list-style-type: none;
-    padding-right: 40px;
-    color: #afb1b2
-  }
-
-  header img{
-    max-width: 120px;
-  }
-
-  header h1 {
-    font-size: 64px;
-  }
-
-  .page-content{
-    padding-top: 20px;
-  }
-
-  main{
-    background-color: #f6f7f6;
-    padding-top: 20px;
-
-  }
-  .content-container {
-    background-color: white;
-    padding: 20px;
-    margin: 0 auto;
-    max-width: 1200px;
-    border: 1px solid #eaeaea;
-    border-radius: 10px;
-  }
-
-  /* Navigation Menu Styles */
-  .nav-menu {
-    display: flex;
-    justify-content: center;
-    border-bottom: 2px solid #e1e1e1;
-  }
-  .tab {
-    padding: 10px 20px;
-    margin: 0 10px;
-    cursor: pointer;
-    border: 2px solid #e1e1e1;
-    border-bottom: none;
-    background-color: #ffffff;
-    transition: background-color 0.3s;
-    font-size: 24px;
-    font-family: 'Roboto', sans-serif;
-    text-decoration: none;
-    text-transform: uppercase;
-    border-top-left-radius: 5px;
-    border-top-right-radius: 5px;
-    color: gray;
-  }
-
-  .active-tab {
-    background-color: #f6f7f6;
-    /* color: black; */
-    color: #4e935b;
-    font-weight: bold;
-    border-color: #e1e1e1;
-    margin-bottom: -2px;
-  }
-
-  .tab:hover {
-    background-color: #f5f5f5;
-  }
-</style>

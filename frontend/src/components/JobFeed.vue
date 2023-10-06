@@ -4,23 +4,46 @@
     <h2>Job Feed</h2>
   </header>
 
-  <div style="display:flex">
-    <button class="btn btn-primary" @click="fetchUpworkJobs">Fetch Upwork Jobs</button>
-    <button class="btn btn-primary" @click="fetchUpworkJobs">Analyze Listings</button>
+  <v-divider></v-divider>
+
+  <div style="margin-top:30px">
+
+    <div>
+      <p>RSS URL: (url)</p>
+      <p>Last Updated: (date)</p>
+      <v-btn>Click to Refresh</v-btn>
+    </div>
+
+    <br/>
+    <v-divider></v-divider>
+
+
+  <!-- <div style="display:flex">
+    <v-btn @click="fetchUpworkJobs">Fetch Upwork Jobs</v-btn>
+    <v-btn @click="fetchUpworkJobs">Analyze Listings</v-btn>
+  </div> -->
+  <v-expansion-panels multiple>
+    <v-expansion-panel
+      color="light-green"
+      v-for="job in dbJobs"
+      :title="job.title"
+      :key="job.guid"
+    >
+      <v-expansion-panel-text>
+        <JobItem
+          :guid="job.guid"
+          :title="job.title"
+          :link="job.link"
+          :description="job.description"
+          :pubDate="job.pubDate"
+          :id="job.id"
+        />
+      </v-expansion-panel-text>
+    </v-expansion-panel>
+
+  </v-expansion-panels>
+
   </div>
-
-  <hr/>
-
-  <JobItem
-    v-for="job in dbJobs"
-    :key="job.guid"
-    :guid="job.guid"
-    :title="job.title"
-    :link="job.link"
-    :description="job.description"
-    :pubDate="job.pubDate"
-    :id="job.id"
-  />
 
 </template>
 

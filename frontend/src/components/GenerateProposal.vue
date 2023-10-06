@@ -4,29 +4,53 @@
     <h2>Upwork Proposal Generator</h2>
   </header>
 
-  <div class="section" id="about-me">
-    <h3 class="section-header__primary">About Me</h3>
-    <textarea
-      v-model="aboutMeText"
-      rows="10"
-      @input="proposalStore.setAboutMeText(aboutMeText)">
-    </textarea>
-  </div>
+  <v-divider></v-divider>
 
-  <div class="section" id="target-job">
-    <h3 class="section-header__primary">Target Job</h3>
-    <textarea
-      v-model="targetJobText"
-      rows="10"
-      @input="proposalStore.setTargetJobText(targetJobText)">
-    </textarea>
-  </div>
+  <div style="margin-top:30px">
 
-  <button class="btn btn-primary" @click="generateOutput(aboutMeText, targetJobText)">Generate Output ></button>
+    <v-expansion-panels multiple>
+      <v-expansion-panel title="About Me" active>
+        <v-expansion-panel-text>
+          Enter your about me text: your areas of expertise and the types of jobs you are looking for.<br/><br/>
+          <v-textarea
+            v-model="aboutMeText"
+            clearable
+            clear-icon="mdi-close-circle"
+            @input="proposalStore.setAboutMeText(aboutMeText)"
+            variant="solo-filled">
+          </v-textarea>
+        </v-expansion-panel-text>
+      </v-expansion-panel>
+      <v-expansion-panel title="Target Job">
+        <v-expansion-panel-text>
+          Copy/paste the job description you are applying for<br/><br/>
+          <v-textarea
+            v-model="targetJobText"
+            clearable
+            clear-icon="mdi-close-circle"
+            @input="proposalStore.setTargetJobText(targetJobText)"
+            variant="solo-filled">
+          </v-textarea>
+        </v-expansion-panel-text>
+      </v-expansion-panel>
+    </v-expansion-panels>
 
-  <div class="section" id="output">
-    <h3 class="section-header__primary">AI Output</h3>
-    <div v-html="outputText" class="text-output"></div>
+    <br/>
+    <v-divider></v-divider>
+    <br/>
+
+    <v-btn color="green" block @click="generateOutput(aboutMeText, targetJobText)">Generate Output ></v-btn>
+    <br/>
+    <v-divider></v-divider>
+    <br/>
+
+    <v-card>
+      <v-card-title>AI Output</v-card-title>
+      <v-card-text>
+        <div v-html="outputText"></div>
+      </v-card-text>
+    </v-card>
+
   </div>
 
 </template>
@@ -107,10 +131,6 @@
 </script>
 
 <style scoped>
-  .section {
-    padding: 0 20px;
-    margin-bottom: 20px;
-  }
 
   textarea {
     display: block;

@@ -1,8 +1,11 @@
 <template>
-	<div class="job-item">
-		<h3 class="section-header__primary">{{ props.title }}</h3>
 
-		<div class="job-item-container">
+	<v-card class="job-item">
+		<v-card-title>
+			<h3 class="section-header__primary">{{ props.title }}</h3>
+		</v-card-title>
+		<v-card-text>
+			<div class="job-item-container">
 			<div v-if="isVisible">
 				<span class="label">Description:</span>
 				<div v-html="props.description"></div>
@@ -19,7 +22,9 @@
 			</div>
 			<!-- <button class="btn btn-primary" v-if="isVisible" @click="generateProposal">Generate Proposal For this Job >>></button> -->
 		</div>
-	</div>
+		</v-card-text>
+	</v-card>
+
 </template>
 
 <script setup>
@@ -71,7 +76,7 @@ onMounted( async() => {
 		guid: props.guid
 	}
 
-	analysis.value = await generateAnalysis(job);
+	// analysis.value = await generateAnalysis(job);
 
 });
 
