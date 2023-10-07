@@ -10,11 +10,12 @@ Full stack web app that helps "cut through the noise" on Upwork listings. Design
 
 
 ## Backend
-
 - Python/Flask server: URL endpoints that fetch data via API calls
 - Google Firebase: Reatime Database
 
-
 ## Frontend
+- Vue.js single page app, using Vuetify UI library
 
-- Vue.js single page app
+## Launching
+From parent folder, run `npm start`
+OR, from backend/ folder run `flask --app=server.py run` and from frontend/ folder run `npm run dev`

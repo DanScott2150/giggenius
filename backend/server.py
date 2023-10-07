@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify
-from flask_cors import CORS
+# from flask_cors import CORS
 import json
 import requests
 import xml.etree.ElementTree as ET
@@ -12,7 +12,7 @@ openai.api_key = config["OPENAI_API_KEY"]
 app = Flask(__name__)
 app.config.from_object(__name__)
 
-CORS(app, resources={r'/*': {'origins': '*'}})
+# CORS(app, resources={r'/*': {'origins': '*'}})
 
 @app.route("/generate-analysis", methods=['POST'])
 def generate_analysis():
