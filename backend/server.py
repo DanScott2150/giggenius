@@ -114,7 +114,7 @@ def fetch_upwork_jobs_rss():
 
 	## Upwork RSS Feed URL
 	# This URL should populate to your saved search options (keyword, budget, etc)
-	target_url = 'https://www.upwork.com/ab/feed/jobs/rss?api_params=1&contractor_tier=1,2,3&hourly_rate=50-&job_type=hourly,fixed&orgUid=872559107033931777&paging=0;5&q=wordpress&securityToken=de56b8790f403c07196293547743d7d0aa964c95b1ad8dbba549fb823dfdbf2ef9ca3f6cb441593ab02952d74ecd8bc19ccf63dd5173aea09e263182b98f2c55&sort=recency&userUid=742862918896668672&user_location_match=1'
+	target_url = 'https://www.upwork.com/ab/feed/jobs/rss?api_params=1&contractor_tier=1,2,3&hourly_rate=50-&job_type=hourly,fixed&orgUid=872559107033931777&paging=0;8&q=wordpress&securityToken=de56b8790f403c07196293547743d7d0aa964c95b1ad8dbba549fb823dfdbf2ef9ca3f6cb441593ab02952d74ecd8bc19ccf63dd5173aea09e263182b98f2c55&sort=recency&userUid=742862918896668672&user_location_match=1'
 
 	jobs = []
 

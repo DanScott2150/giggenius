@@ -15,6 +15,7 @@ import 'vuetify/dist/vuetify.min.css';
 // Top-level components
 import App from './App.vue'
 import JobFeed from './components/JobFeed.vue';
+import AllJobs from './components/AllJobs.vue';
 import GenerateProposal from './components/GenerateProposal.vue';
 
 const app = createApp(App)
@@ -30,6 +31,7 @@ app.use( vuetify );
 
 const routes = [
     { path: '/generate-proposal', component: GenerateProposal, name: 'Generate Proposal' },
+    { path: '/all-jobs', component: AllJobs, name: 'All Jobs' },
     { path: '/', component: JobFeed, name: 'Job Feed' }
 ];
 
