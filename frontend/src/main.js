@@ -7,9 +7,10 @@ import { VueFire } from 'vuefire';
 import { firebaseApp } from './firebase';
 
 // Vuetify UI
-import { createVuetify } from 'vuetify'
-import * as components from 'vuetify/components'
-import * as directives from 'vuetify/directives'
+import { createVuetify } from 'vuetify';
+import * as components from 'vuetify/components';
+import * as directives from 'vuetify/directives';
+import { VDataTable, VDataTableServer, VDataTableVirtual } from 'vuetify/labs/VDataTable';
 import 'vuetify/dist/vuetify.min.css';
 
 // Top-level components
@@ -22,10 +23,15 @@ const app = createApp(App)
 
 app.use(VueFire, { firebaseApp });
 
+// VDataTable is via Vuetify Labs, not included by default. Need to import it manually.
 const vuetify = createVuetify({
-    components,
+    components: {
+        ...components,
+        VDataTable,
+      },
     directives,
 });
+
 
 app.use( vuetify );
 
