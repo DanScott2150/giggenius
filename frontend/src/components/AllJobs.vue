@@ -48,9 +48,10 @@
 						<JobData
 							:guid="item.guid"
 							:title="item.title"
-							:link="item.link"
+							:link="item.url"
 							:description="item.description"
 							:pubDate="item.pubDate"
+							:analysis="item.aiAnalysis"
 							:id="item.id"
         		/>
 					</td>

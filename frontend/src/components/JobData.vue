@@ -6,6 +6,7 @@
 			<v-container>
 				<v-row>
 					<v-col cols="8">
+						<p class="label">Job Information:</p>
 						<div v-html="props.description"></div>
 					</v-col>
 					<v-col cols="4">
@@ -32,9 +33,9 @@
 </template>
 
 <script setup>
-import { ref, defineProps, onMounted, onUpdated } from 'vue';
+import { ref, defineProps, watch } from 'vue';
+import { ref as dbRef, getDatabase, update } from 'firebase/database';
 import { useProposalStore } from '../store';
-
 import ButtonComponent from './base/Button2.vue'
 
 const props = defineProps([
@@ -42,29 +43,24 @@ const props = defineProps([
 	'link',
 	'description',
 	'pubDate',
-	'guid'
+	'guid',
+	'analysis',
+	'id'
 ]);
 
-const analysis = ref(null);
+const analysis      = ref(props.analysis);
+const jobText       = ref(props.description);
 const proposalStore = useProposalStore();
-
 const aboutMeText   = ref(proposalStore.aboutMeText);
-const jobText = ref(props.description);
 
-
-onMounted( async() => {
-
-	const job = {
-		aboutMeText: aboutMeText.value,
-		jobText: jobText.value,
-		guid: props.guid
-	}
-
-	// analysis.value = await generateAnalysis(job);
-
-});
-
-const generateAnalysis = async (job) => {
+/**
+ * Generates the AI analysis for a given job. API call to flask server which connects to OpenAI.
+ *
+ * @param {string} jobText - The text of the job description, accessed via props, which pull from the database.
+ * @param {string} aboutMeText - The text of the user skills/experience/interests, accessed via global store.
+ *
+ */
+const generateAnalysis = async () => {
 
 	const url = "http://127.0.0.1:5000/generate-analysis";
 
@@ -73,15 +69,38 @@ const generateAnalysis = async (job) => {
 		headers: {
 			'Content-Type': 'application/json',
 		},
-		body: JSON.stringify(job)
+		body: JSON.stringify({
+			jobText: jobText.value,
+			aboutMeText: aboutMeText.value,
+			guid: props.guid
+		})
 	} );
 
-    const data = await response.json();
+	const data = await response.json();
+	analysis.value = data || "Error generating output.";
 
-	console.log(data);
+}
 
-	return data || "Error generating output.";
-  }
+/**
+ * After the AI Analysis is updated for a given job, update the value in the database too.
+ */
+watch(analysis, (newAnalysis) => {
+
+	const db    = getDatabase();
+	const jobID = props.id;
+
+	// Send new value to firebase database using update()
+	update(dbRef(db, `users/u1/jobs/${jobID}`), {
+		aiAnalysis: newAnalysis
+	})
+  .then(() => {
+    console.log("Data updated successfully");
+  })
+  .catch((error) => {
+    console.error("Error updating data: ", error);
+  });
+
+});
 
 </script>
 
