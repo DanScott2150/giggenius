@@ -2,7 +2,7 @@
 
 Full stack web app that helps "cut through the noise" on Upwork listings. Designed for freelancers who aren't chasing work, but only looking for specific types of projects. Will only show you projects that are in your wheelhouse, and help you auto-generate a first draft proposal. Spend less time searching & sorting, more time earning.
 
-1) Fetches initial job feed from Upwork, based on your Upwork account search filters. This happens via Upwork's RSS feed.
+1) Fetches initial job feed from Upwork, based on your Upwork account search filters. This happens via Upwork's RSS feed - it does not scrape the site in any way that violates the Upwork TOS.
 2) AI Bot analyzes results against user-defined strengths and preferences, only presenting the user with a list of job opportunities deemed a "strong match"
 3) Job results & analysis stored in database, to prevent duplicate entries and ensure user only ever sees new content
 4) User is able to provide feedback on AI's analysis on any given job listing, allowing user to incrementally fine-tune the AI model.
