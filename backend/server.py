@@ -5,6 +5,7 @@ import requests
 import xml.etree.ElementTree as ET
 import openai
 from dotenv import dotenv_values
+import re
 
 config = dotenv_values('.env')
 openai.api_key = config["OPENAI_API_KEY"]
@@ -114,7 +115,7 @@ def fetch_upwork_jobs_rss():
 
 	## Upwork RSS Feed URL
 	# This URL should populate to your saved search options (keyword, budget, etc)
-	target_url = 'https://www.upwork.com/ab/feed/jobs/rss?api_params=1&contractor_tier=1,2,3&hourly_rate=50-&job_type=hourly,fixed&orgUid=872559107033931777&paging=0;8&q=wordpress&securityToken=de56b8790f403c07196293547743d7d0aa964c95b1ad8dbba549fb823dfdbf2ef9ca3f6cb441593ab02952d74ecd8bc19ccf63dd5173aea09e263182b98f2c55&sort=recency&userUid=742862918896668672&user_location_match=1'
+	target_url = 'https://www.upwork.com/ab/feed/jobs/rss?api_params=1&contractor_tier=1,2,3&hourly_rate=50-&job_type=hourly,fixed&orgUid=872559107033931777&paging=0;3&q=wordpress&securityToken=de56b8790f403c07196293547743d7d0aa964c95b1ad8dbba549fb823dfdbf2ef9ca3f6cb441593ab02952d74ecd8bc19ccf63dd5173aea09e263182b98f2c55&sort=recency&userUid=742862918896668672&user_location_match=1'
 
 	jobs = []
 
@@ -125,22 +126,58 @@ def fetch_upwork_jobs_rss():
 		data = ET.fromstring(response.text)
 		items = data.findall('.//item')
 
+		'''
+		Example structure:
+		<item>
+			<title>
+			<link>
+			<description> // Contains <b>Skills</b>, <b>Budget</b>, <b>Hourly Range</b> which we can further parse out
+			<content:encoded> //same as description
+			<pubDate>
+			<guid>
+		</item>
+		'''
+
 		for job in items:
-			guid = job.find('guid').text
+
+			description = job.find('description').text
+
+			# Budget is nested within description as text content. Need regex pattern match.
+			# Upwork jobs can either be fixed-price or hourly-range:
+			# 	If fixed-price, value labeled as "Budget" within description content.
+			# 	If hourly-range, value labeled as "Hourly Range" within description content.
+			# Use regex to check one, then the other
+			budgetMatchFixed = re.search(r'(<b>Budget</b>: \$(\d+))', description)
+			budgetMatchHourly = re.search(r'(<b>Hourly Range</b>: (\$\d+\.\d+-\$\d+\.\d+))', description)
+
+			budget = "N/A"
+
+			if budgetMatchFixed:
+				budget = "$" +budgetMatchFixed.group(2)
+				description = re.sub(re.escape(budgetMatchFixed.group(1)), '', description) # Remove from description content to avoid redundancy
+			elif budgetMatchHourly:
+				budget = budgetMatchHourly.group(2)
+				description = re.sub(re.escape(budgetMatchHourly.group(1)), '', description) # Remove from description content to avoid redundancy
+
+			# Remove "Posted On" line from description content to prevent redundancy, since we extract it elsewhere
+			postedOnMatch = re.search(r'(<b>Posted On</b>: .+? UTC<br />)', description)
+			if postedOnMatch:
+				description = re.sub(re.escape(postedOnMatch.group(1)), '', description)
+
 			job_info = {
-				'guid': guid,
+				'guid': job.find('guid').text,
 				'aiAnalysis': {
-				'decision': 'n/a',
-				'summary': 'n/a'
-			},
-				'budget': 'TBD',
-				'description': job.find('description').text,
+					'decision': '',
+					'summary': ''
+				},
+				'budget': budget,
+				'description': description,
 				'feedback': {},
 				'title': job.find('title').text,
 				'url': job.find('link').text,
 				'pubDate': job.find('pubDate').text
 			}
-			print(job_info)
+			# print(job_info)
 			jobs.append(job_info)
 
 	except Exception as error:

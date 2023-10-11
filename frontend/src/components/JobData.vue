@@ -21,7 +21,7 @@
 						<p>{{ props.pubDate }}</p>
 
 						<p class="label">Budget:</p>
-						<p>TBD</p>
+						<p>{{ props.budget }}</p>
 
 					</v-col>
 				</v-row>
@@ -45,7 +45,8 @@ const props = defineProps([
 	'pubDate',
 	'guid',
 	'analysis',
-	'id'
+	'id',
+	'budget'
 ]);
 
 const analysis      = ref(props.analysis);

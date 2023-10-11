@@ -86,13 +86,14 @@ async function fetchUpworkJobs(){
 
     data.forEach((job => {
 
+      // @TODO this should probably happen server-side when we fetch the jobs
       const jobInfo = {
         guid: encodeURIComponent(job.guid),
         aiAnalysis: {
-          decision: "n/a",
-          summary: "n/a"
+          decision: "",
+          summary: ""
         },
-        budget: "TBD",
+        budget: job.budget,
         description: job.description,
         feedback: {},
         title: job.title,

@@ -50,6 +50,7 @@
 							:title="item.title"
 							:link="item.url"
 							:description="item.description"
+							:budget="item.budget"
 							:pubDate="item.pubDate"
 							:analysis="item.aiAnalysis"
 							:id="item.id"
