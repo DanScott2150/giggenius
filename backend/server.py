@@ -28,70 +28,57 @@ def generate_analysis():
 
 	Note:
 	- OpenAI prompts for System and User messages are hardcoded here. Will eventually move elsewhere to be more dynamic.
-	- @TODO - use openAI library methods instead of manual HTTPS post request
+	- @TODO look into chaining responses, rather than adding display:none to the first part of the response.
 	"""
 
 	args = request.json
-	api_url = 'https://api.openai.com/v1/chat/completions'
-	api_key = openai.api_key
-
-	headers = {
-		"Content-Type": "application/json",
-		"Authorization": f"Bearer {api_key}",
-	}
+	model = "gpt-3.5-turbo"
 
 	user_prompt = f'''
 		MY EXPERIENCE: ### {args["aboutMeText"]} ###
 		JOB DESCRIPTION: ### {args["jobText"]} ###
 		JOB ID: ### {args["guid"]} ###
+		'''
 
-		Your response should only match the following format exactly. You should not provide any extra summary or analysis.
-		---
-		<div style="display:none;">: Applicant Summary: <<APPLICANT_SUMMARY>> -- Job Summary:<<JOB_SUMMARY>></div>
-		<p><strong>Decision</strong>: <span id="<<JOB ID>>"><<MATCH_DECISION>></span></p>
-		<p><strong>Assessment</strong>: <<MATCH_SUMMARY>></p>
-		---
-	'''
-
-	data = {
-		"model": "gpt-3.5-turbo",
-		"messages": [
-			{
+	messages = [
+		{
 			"role": "system",
 			"content": '''
-			CONTEXT: You are an expert HR professional, highly skilled in evaluating whether or not an applicant would be a good fit for a job.
-			Your job is to take inputs provided by the user, and decide whether or not the job is a "match" for the applicant.
+				CONTEXT: You are an expert HR professional, highly skilled in evaluating whether or not an applicant would be a good fit for a job.
+				Your job is to take inputs provided by the user, and decide whether or not the job is a "match" for the applicant.
 
-			You will be provided with two inputs: MY_EXPERIENCE, and JOB_DESCRIPTION.
+				You will be provided with two inputs: MY_EXPERIENCE, and JOB_DESCRIPTION.
 
-			When given a task, you will think it through step-by-step:
+				When given a task, you will think it through step-by-step:
 
-			First: Create a *bullet point summary* of MY_EXPERIENCE. Bullet points should only reference things that are explicitly declared within MY_EXPERIENCE. This *bullet point summary* will be referred to as the "APPLICANT_SUMMARY" in the following steps.
-			Second: Create a *bullet point summary* of the requirements being asked for in JOB_DESCRIPTION. Bullet points should only reference things that are explicitly declared within JOB_DESCRIPTION and should be ranked in order of importance. This *bullet point summary* will be referred to as the "JOB_SUMMARY" in the following steps.
-			Third: Compare the APPLICANT_SUMMARY and JOB_SUMMARY and determine whether or not the user is a strong candidate for this position, and explain your reasoning in 1 paragraph. This will be referred to as the "MATCH_SUMMARY" in the following steps.
-			Fourth: Based on the MATCH_SUMMARY you generated, decide on a classification: "Strong Candidate", "Weak Candidate", or "Not a Candidate". This will be referred to as the MATCH_DECISION.
+				First: Create a *bullet point summary* of MY_EXPERIENCE. Bullet points should only reference things that are explicitly declared within MY_EXPERIENCE. This *bullet point summary* will be referred to as the "APPLICANT_SUMMARY" in the following steps.
+				Second: Create a *bullet point summary* of the requirements being asked for in JOB_DESCRIPTION. Bullet points should only reference things that are explicitly declared within JOB_DESCRIPTION and should be ranked in order of importance. This *bullet point summary* will be referred to as the "JOB_SUMMARY" in the following steps.
+				Third: Compare the APPLICANT_SUMMARY and JOB_SUMMARY and determine whether or not the user is a strong candidate for this position, and explain your reasoning in 1 paragraph. This will be referred to as the "MATCH_SUMMARY" in the following steps.
+				Fourth: Based on the MATCH_SUMMARY you generated, decide on a classification: "Strong Candidate", "Weak Candidate", or "Not a Candidate". This will be referred to as the MATCH_DECISION.
 
-			All of your responses should match the following format exactly:
-			---
-			<div style="display:none;">: Applicant Summary:<<APPLICANT_SUMMARY>> -- Job Summary:<<JOB_SUMMARY>></div>
-			<p><strong>Decision</strong>: <span id="<<JOB ID>>}"><< MATCH_DECISION>></span></p>
-			<p><strong>Assessment</strong>: <<MATCH_SUMMARY>></p>
-			---
+				All of your responses should match the following format exactly:
+				---
+				<div style="display:none;">: Applicant Summary:<<APPLICANT_SUMMARY>> -- Job Summary:<<JOB_SUMMARY>></div>
+				<p><strong>Decision</strong>: <span id="<<JOB ID>>}"><< MATCH_DECISION>></span></p>
+				<p><strong>Assessment</strong>: <<MATCH_SUMMARY>></p>
+				---
 			'''
-			},
-			{
+		},
+		{
 			"role": "user",
 			"content": user_prompt
-			}
-		]
-	}
-
+		}
+	]
 	try:
-		# POST request to OpenAI
-		response = requests.post(api_url, headers=headers, data=json.dumps(data))
-		response_data = response.json()
-		analysis = response_data['choices'][0]['message']['content']
+		response = openai.ChatCompletion.create(
+			model=model,
+			messages=messages
+			)
+
+		analysis = response.choices[0].message.content
+
 		return jsonify(analysis)
+
 	except Exception as error:
 		print('Error generating analysis:', error)
 		return "Error generating output."
@@ -115,7 +102,9 @@ def fetch_upwork_jobs_rss():
 
 	## Upwork RSS Feed URL
 	# This URL should populate to your saved search options (keyword, budget, etc)
-	target_url = 'https://www.upwork.com/ab/feed/jobs/rss?api_params=1&contractor_tier=1,2,3&hourly_rate=50-&job_type=hourly,fixed&orgUid=872559107033931777&paging=0;3&q=wordpress&securityToken=de56b8790f403c07196293547743d7d0aa964c95b1ad8dbba549fb823dfdbf2ef9ca3f6cb441593ab02952d74ecd8bc19ccf63dd5173aea09e263182b98f2c55&sort=recency&userUid=742862918896668672&user_location_match=1'
+	# target_url = 'https://www.upwork.com/ab/feed/jobs/rss?api_params=1&contractor_tier=1,2,3&hourly_rate=50-&job_type=hourly,fixed&orgUid=872559107033931777&paging=0;3&q=wordpress&securityToken=de56b8790f403c07196293547743d7d0aa964c95b1ad8dbba549fb823dfdbf2ef9ca3f6cb441593ab02952d74ecd8bc19ccf63dd5173aea09e263182b98f2c55&sort=recency&userUid=742862918896668672&user_location_match=1'
+	# target_url = 'https://www.upwork.com/ab/feed/jobs/rss?q=wordpress&sort=recency&user_location_match=1&paging=0%3B10&api_params=1&userUid=742862918896668672'
+	target_url = 'https://www.upwork.com/ab/feed/jobs/rss?q=wordpress&sort=recency&user_location_match=1&paging=0;10&api_params=1&hourly_rate=50-&job_type=hourly,fixed'
 
 	jobs = []
 
@@ -139,6 +128,14 @@ def fetch_upwork_jobs_rss():
 		'''
 
 		for job in items:
+
+			titleItem = job.find('title')
+
+        	# Remove excessive upwork branding from title
+			if titleItem is not None and titleItem.text.endswith(" - Upwork"):
+				title = titleItem.text.rsplit(" - Upwork", 1)[0]
+			else:
+				title = titleItem.text
 
 			description = job.find('description').text
 
@@ -173,7 +170,7 @@ def fetch_upwork_jobs_rss():
 				'budget': budget,
 				'description': description,
 				'feedback': {},
-				'title': job.find('title').text,
+				'title': title,
 				'url': job.find('link').text,
 				'pubDate': job.find('pubDate').text
 			}
