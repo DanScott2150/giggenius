@@ -4,6 +4,9 @@
     <h2>Job Feed</h2>
   </header>
 
+  <p>Your 10 most recent jobs that are deemed to be a strong match</p>
+
+  <br/>
   <v-divider></v-divider>
 
   <div style="margin-top:30px">
@@ -11,37 +14,62 @@
     <div>
       <p>RSS URL: (url)</p>
       <p>Last Updated: (date)</p>
-      <v-btn>Click to Refresh</v-btn>
+      <v-btn @click="fetchUpworkJobs">Fetch Fresh Upwork Jobs</v-btn>
     </div>
 
-    <br/>
+    <br/><br/>
     <v-divider></v-divider>
 
+    <v-data-table
+			v-model:expanded="expanded"
+			:headers="jobTableHeaders"
+			:items="currentJobFeed"
+			item-value="title"
+			show-expand
+			class="elevation-1"
+			:sort-by="[{ key: 'pubDate', order: 'asc' }]"
+			>
 
-  <div style="display:flex">
-    <v-btn @click="fetchUpworkJobs">Fetch Upwork Jobs</v-btn>
-    <!-- <v-btn @click="fetchUpworkJobs">Analyze Listings</v-btn> -->
-  </div>
-  <v-expansion-panels multiple>
-    <v-expansion-panel
-      color="light-green"
-      v-for="job in currentJobFeed"
-      :title="job.title"
-      :key="job.guid"
-    >
-      <v-expansion-panel-text>
-        <JobItem
-          :guid="job.guid"
-          :title="job.title"
-          :link="job.link"
-          :description="job.description"
-          :pubDate="job.pubDate"
-          :id="job.id"
-        />
-      </v-expansion-panel-text>
-    </v-expansion-panel>
+			<!-- Modal Popup for row deletion confirmation -->
+			<template v-slot:top>
+				<v-toolbar flat>
+					<v-toolbar-title>All Saved Jobs</v-toolbar-title>
+					<v-dialog v-model="dialogDelete" max-width="500px">
+						<v-card>
+							<v-card-title class="text-h5">Are you sure you want to delete this item?</v-card-title>
+							<v-card-actions>
+								<v-spacer></v-spacer>
+								<v-btn color="blue-darken-1" variant="text" @click="closeDelete">Cancel</v-btn>
+								<v-btn color="blue-darken-1" variant="text" @click="deleteItemConfirm">OK</v-btn>
+								<v-spacer></v-spacer>
+							</v-card-actions>
+						</v-card>
+					</v-dialog>
+				</v-toolbar>
+			</template>
 
-  </v-expansion-panels>
+			<template v-slot:item.actions="{ item }">
+				<v-icon size="small" @click="deleteItem(item)">mdi-delete</v-icon>
+			</template>
+
+			<template v-slot:expanded-row="{ columns, item }">
+				<tr>
+					<td :colspan="columns.length">
+						<JobData
+							:guid="item.guid"
+							:title="item.title"
+							:link="item.url"
+							:description="item.description"
+							:budget="item.budget"
+							:pubDate="item.pubDate"
+							:analysis="item.aiAnalysis"
+							:id="item.id"
+        		/>
+					</td>
+				</tr>
+			</template>
+
+		</v-data-table>
 
   </div>
 
@@ -49,25 +77,69 @@
 
 <script setup>
 import axios from 'axios';
-import JobItem from './JobItem.vue';
 import { useJobFeedStore } from '../store';
-import { ref, computed } from 'vue';
-
+import { ref, computed, watch } from 'vue';
+import JobData from './JobData.vue';
 
 // Setup connection to Firebase Realtime Database
 import { useDatabase } from 'vuefire'
 import { useDatabaseList } from 'vuefire';
-import { ref as dbRef, push, get, query } from 'firebase/database';
-
-const db = useDatabase();
-const dbJobs = useDatabaseList(dbRef(db, 'users/u1/jobs'));
-
+import { ref as dbRef, push, get, remove, query, limitToLast, orderByChild, onValue } from 'firebase/database';
 
 const jobFeedStore = useJobFeedStore();
 const currentJobFeed = computed(() => jobFeedStore.currentJobFeed);
-// const currentJobFeed = ref(jobFeedStore.currentJobFeed);
 
-console.log(currentJobFeed.value);
+// Check if currentJobFeed is empty. If so, fetch the 10 most recent jobs from firebase.
+if (currentJobFeed.value.length === 0) {
+  const db = useDatabase();
+  const jobsRef = dbRef(db, 'users/u1/jobs');
+  const recentJobsQuery = query(jobsRef, orderByChild('timestamp'), limitToLast(10));
+
+  // Save jobs to vue store so we're not re-fetching them every time
+  onValue(recentJobsQuery, snapshot => {
+    const jobsArray = [];
+    snapshot.forEach(childSnapshot => {
+      const jobData = childSnapshot.val();
+      const jobId = childSnapshot.key;
+      jobData.id = jobId;
+      jobsArray.push(jobData);
+    });
+
+    jobFeedStore.currentJobFeed = jobsArray;
+  });
+}
+
+// Modal Popup for row deletion confirmation
+const toDelete = ref({});
+const expanded = ref([]);
+const dialogDelete = ref(false);
+
+const jobTableHeaders = ref([
+  { title: '', key: 'data-table-expand' },
+  { title: 'Job Title', align: 'start', sortable: false, key: 'title' },
+  { title: 'Budget', key: 'budget' },
+  { title: 'Post Date', key: 'pubDate' },
+  { title: '', key: 'actions', sortable: false },
+]);
+
+watch(dialogDelete, (val) => {
+  val || closeDelete();
+});
+
+const deleteItem = function(item) {
+  toDelete.value = item;
+  dialogDelete.value = true;
+}
+
+const deleteItemConfirm = function() {
+  let jobRef = dbRef(db, `users/u1/jobs/${toDelete.value.id}`);
+  remove(jobRef);
+  closeDelete()
+}
+
+const closeDelete = function() {
+  dialogDelete.value = false
+}
 
 /**
  * Fetch list of jobs from Upwork RSS feed.
@@ -103,9 +175,7 @@ async function fetchUpworkJobs(){
 
       jobFeedStore.addJobToCurrentJobFeed(jobInfo);
 
-      // Push new job to currentJobFeed store
-      // currentJobFeed.value.push(jobInfo);
-
+      // In addition to adding to currentFeed store, push job to firebase db for user
       addJobForUser('u1', jobInfo )
 
     }))
@@ -115,21 +185,21 @@ async function fetchUpworkJobs(){
   }
 }
 
+/**
+ * Add a job to firebase db for a given user.
+ */
 async function addJobForUser(userId, newJob) {
 
   const jobRef = dbRef(db, `users/${userId}/jobs`);
   const snapshot = await get(jobRef);
-
-  console.log(snapshot.val());
 
   // Check if any job has the same guid as the new job
   const existingJobs = snapshot.val() || {};
 
   for (let jobId in existingJobs) {
       if (existingJobs[jobId].guid === newJob.guid) {
-          console.log("Job with this GUID already exists!");
-          console.log(newJob.guid);
-          return; // Exit the function if a matching GUID is found
+          // If this job already exists, don't add it
+          return;
       }
   }
 
