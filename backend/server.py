@@ -1,6 +1,5 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import json
 import requests
 import xml.etree.ElementTree as ET
 import openai
@@ -9,6 +8,9 @@ import re
 
 from langchain.chat_models import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate
+from langchain.prompts.chat import SystemMessagePromptTemplate, HumanMessagePromptTemplate
+from langchain.output_parsers import PydanticOutputParser
+from langchain.pydantic_v1 import BaseModel, Field
 
 config = dotenv_values('.env')
 openai.api_key = config["OPENAI_API_KEY"]
@@ -36,8 +38,17 @@ def generate_analysis():
 
 	args = request.json
 	model = "gpt-3.5-turbo"
-
 	llm = ChatOpenAI(temperature=0, model=model)
+
+	# Schema for how we want the AI model to return data to us
+	class Analysis(BaseModel):
+		my_experience: str = Field(description="The MY_EXPERIENCE analysis provided by AI model")
+		job_summary: str = Field(description="The JOB_SUMMARY analysis provided by AI model")
+		match_summary: str = Field(description="The MATCH_SUMMARY analysis provided by AI model")
+		match_decision: str = Field(description="The MATCH_DECISION determined by AI model")
+
+	parser = PydanticOutputParser(pydantic_object=Analysis)
+	format_instructions = parser.get_format_instructions()
 
 	user_prompt = f'''
 		MY EXPERIENCE: ### {args["aboutMeText"]} ###
@@ -45,39 +56,35 @@ def generate_analysis():
 		JOB ID: ### {args["guid"]} ###
 		'''
 
-	template = ChatPromptTemplate.from_messages([
-		(
-			"system",
-			'''
-				CONTEXT: You are an expert HR professional, highly skilled in evaluating whether or not an applicant would be a good fit for a job.
-				Your job is to take inputs provided by the user, and decide whether or not the job is a "match" for the applicant.
+	system_prompt = """
+		You are an expert HR professional, highly skilled in evaluating whether or not an applicant would be a good fit for a job.
+		Your job is to take inputs provided by the user, and decide whether or not the job is a "match" for the applicant.
 
-				You will be provided with two inputs: MY_EXPERIENCE, and JOB_DESCRIPTION.
+		You will be provided with two inputs: MY_EXPERIENCE, and JOB_DESCRIPTION.
 
-				When given a task, you will think it through step-by-step:
+		When given a task, you will think it through step-by-step:
 
-				First: Create a *bullet point summary* of MY_EXPERIENCE. Bullet points should only reference things that are explicitly declared within MY_EXPERIENCE. This *bullet point summary* will be referred to as the "APPLICANT_SUMMARY" in the following steps.
-				Second: Create a *bullet point summary* of the requirements being asked for in JOB_DESCRIPTION. Bullet points should only reference things that are explicitly declared within JOB_DESCRIPTION and should be ranked in order of importance. This *bullet point summary* will be referred to as the "JOB_SUMMARY" in the following steps.
-				Third: Compare the APPLICANT_SUMMARY and JOB_SUMMARY and determine whether or not the user is a strong candidate for this position, and explain your reasoning in 1 paragraph. This will be referred to as the "MATCH_SUMMARY" in the following steps.
-				Fourth: Based on the MATCH_SUMMARY you generated, decide on a classification: "Strong Candidate", "Weak Candidate", or "Not a Candidate". This will be referred to as the MATCH_DECISION.
+		First: Create a *bullet point summary* of MY_EXPERIENCE. Bullet points should only reference things that are explicitly declared within MY_EXPERIENCE. This *bullet point summary* will be referred to as the "APPLICANT_SUMMARY" in the following steps.
+		Second: Create a *bullet point summary* of the requirements being asked for in JOB_DESCRIPTION. Bullet points should only reference things that are explicitly declared within JOB_DESCRIPTION and should be ranked in order of importance. This *bullet point summary* will be referred to as the "JOB_SUMMARY" in the following steps.
+		Third: Compare the APPLICANT_SUMMARY and JOB_SUMMARY and determine whether or not the user is a strong candidate for this position, and explain your reasoning in 1 paragraph. This will be referred to as the "MATCH_SUMMARY" in the following steps.
+		Fourth: Based on the MATCH_SUMMARY you generated, decide on a classification: "Strong Candidate", "Weak Candidate", or "Not a Candidate". This will be referred to as the MATCH_DECISION.
 
-				All of your responses should match the following format exactly:
-				---
-				<div style="display:none;">: Applicant Summary:<<APPLICANT_SUMMARY>> -- Job Summary:<<JOB_SUMMARY>></div>
-				<p><strong>Decision</strong>: <span id="<<JOB ID>>"><< MATCH_DECISION>></span></p>
-				<p><strong>Assessment</strong>: <<MATCH_SUMMARY>></p>
-				---
-			'''
-		),
-		(
-			"human", user_prompt
-		)
-	])
+		{format_instructions}
+		"""
+
+	messages = [
+		SystemMessagePromptTemplate.from_template(system_prompt),
+		HumanMessagePromptTemplate.from_template(user_prompt)
+	]
+
+	template = ChatPromptTemplate(
+		messages=messages,
+	)
 
 	try:
-		answer = llm(template.format_messages(user_prompt=user_prompt))
-		analysis = answer.content
-		return jsonify(analysis)
+		input = template.format_messages(user_prompt=user_prompt, format_instructions=format_instructions)
+		output = llm(input)
+		return jsonify(output.content)
 
 	except Exception as error:
 		print('Error generating analysis:', error)
