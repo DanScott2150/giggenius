@@ -84,7 +84,8 @@ def generate_analysis():
 	try:
 		input = template.format_messages(user_prompt=user_prompt, format_instructions=format_instructions)
 		output = llm(input)
-		return jsonify(output.content)
+		content = parser.parse(output.content)
+		return jsonify(content.dict())
 
 	except Exception as error:
 		print('Error generating analysis:', error)

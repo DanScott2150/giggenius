@@ -11,6 +11,9 @@
 					</v-col>
 					<v-col cols="4">
 
+						<p class="label">Match:</p>
+						<div v-html="match"></div>
+
 						<p class="label">AI Analysis:</p>
 						<div v-html="analysis"></div>
 						<ButtonComponent label="AI Analyze" :action="generateAnalysis" />
@@ -45,11 +48,13 @@ const props = defineProps([
 	'pubDate',
 	'guid',
 	'analysis',
+	'match',
 	'id',
 	'budget'
 ]);
 
 const analysis      = ref(props.analysis);
+const match         = ref(props.match);
 const jobText       = ref(props.description);
 const proposalStore = useProposalStore();
 const aboutMeText   = ref(proposalStore.aboutMeText);
@@ -78,7 +83,9 @@ const generateAnalysis = async () => {
 	} );
 
 	const data = await response.json();
-	analysis.value = data || "Error generating output.";
+	console.log(data);
+	analysis.value = data["match_summary"] || "Error generating output.";
+	match.value = data["match_decision"] || "Error generating output.";
 
 }
 
@@ -92,7 +99,8 @@ watch(analysis, (newAnalysis) => {
 
 	// Send new value to firebase database using update()
 	update(dbRef(db, `users/u1/jobs/${jobID}`), {
-		aiAnalysis: newAnalysis
+		"aiAnalysis/summary": newAnalysis,
+		"aiAnalysis/decision": match.value
 	})
   .then(() => {
     console.log("Data updated successfully");

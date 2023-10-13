@@ -52,7 +52,8 @@
 							:description="item.description"
 							:budget="item.budget"
 							:pubDate="item.pubDate"
-							:analysis="item.aiAnalysis"
+							:analysis="item.aiAnalysis.summary"
+							:match="item.aiAnalysis.decision"
 							:id="item.id"
         		/>
 					</td>
