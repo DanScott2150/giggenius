@@ -20,56 +20,16 @@
     <br/><br/>
     <v-divider></v-divider>
 
-    <v-data-table
+    <JobDataTable
 			v-model:expanded="expanded"
-			:headers="jobTableHeaders"
-			:items="currentJobFeed"
+			class="elevation-1"
 			item-value="title"
 			show-expand
-			class="elevation-1"
+			:headers="jobTableHeaders"
+			:items="currentJobFeed"
 			:sort-by="[{ key: 'pubDate', order: 'asc' }]"
 			>
-
-			<!-- Modal Popup for row deletion confirmation -->
-			<template v-slot:top>
-				<v-toolbar flat>
-					<v-toolbar-title>All Saved Jobs</v-toolbar-title>
-					<v-dialog v-model="dialogDelete" max-width="500px">
-						<v-card>
-							<v-card-title class="text-h5">Are you sure you want to delete this item?</v-card-title>
-							<v-card-actions>
-								<v-spacer></v-spacer>
-								<v-btn color="blue-darken-1" variant="text" @click="closeDelete">Cancel</v-btn>
-								<v-btn color="blue-darken-1" variant="text" @click="deleteItemConfirm">OK</v-btn>
-								<v-spacer></v-spacer>
-							</v-card-actions>
-						</v-card>
-					</v-dialog>
-				</v-toolbar>
-			</template>
-
-			<template v-slot:item.actions="{ item }">
-				<v-icon size="small" @click="deleteItem(item)">mdi-delete</v-icon>
-			</template>
-
-			<template v-slot:expanded-row="{ columns, item }">
-				<tr>
-					<td :colspan="columns.length">
-						<JobData
-							:guid="item.guid"
-							:title="item.title"
-							:link="item.url"
-							:description="item.description"
-							:budget="item.budget"
-							:pubDate="item.pubDate"
-							:analysis="item.aiAnalysis"
-							:id="item.id"
-        		/>
-					</td>
-				</tr>
-			</template>
-
-		</v-data-table>
+		</JobDataTable>
 
   </div>
 
@@ -78,13 +38,12 @@
 <script setup>
 import axios from 'axios';
 import { useJobFeedStore } from '../store';
-import { ref, computed, watch } from 'vue';
-import JobData from './JobData.vue';
+import { ref, computed } from 'vue';
+import JobDataTable from './JobDataTable.vue';
 
 // Setup connection to Firebase Realtime Database
 import { useDatabase } from 'vuefire'
-import { useDatabaseList } from 'vuefire';
-import { ref as dbRef, push, get, remove, query, limitToLast, orderByChild, onValue } from 'firebase/database';
+import { ref as dbRef, push, get, query, limitToLast, orderByChild, onValue } from 'firebase/database';
 
 const jobFeedStore = useJobFeedStore();
 const currentJobFeed = computed(() => jobFeedStore.currentJobFeed);
@@ -110,10 +69,7 @@ if (currentJobFeed.value.length === 0) {
   });
 }
 
-// Modal Popup for row deletion confirmation
-const toDelete = ref({});
 const expanded = ref([]);
-const dialogDelete = ref(false);
 
 const jobTableHeaders = ref([
   { title: '', key: 'data-table-expand' },
@@ -123,24 +79,6 @@ const jobTableHeaders = ref([
   { title: '', key: 'actions', sortable: false },
 ]);
 
-watch(dialogDelete, (val) => {
-  val || closeDelete();
-});
-
-const deleteItem = function(item) {
-  toDelete.value = item;
-  dialogDelete.value = true;
-}
-
-const deleteItemConfirm = function() {
-  let jobRef = dbRef(db, `users/u1/jobs/${toDelete.value.id}`);
-  remove(jobRef);
-  closeDelete()
-}
-
-const closeDelete = function() {
-  dialogDelete.value = false
-}
 
 /**
  * Fetch list of jobs from Upwork RSS feed.
