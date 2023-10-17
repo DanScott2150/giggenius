@@ -86,7 +86,7 @@
 	const jobTableHeaders = ref([
 		{ title: '', key: 'data-table-expand' },
 		{ title: 'Job Title', align: 'start', sortable: false, key: 'title' },
-		// { title: 'Budget', key: 'budget' },
+		{ title: 'Match', key: 'aiAnalysis.decision' },
 		{ title: 'Post Date', key: 'pubDate' },
 		{ title: '', key: 'actions', sortable: false },
 	]);

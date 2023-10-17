@@ -89,10 +89,11 @@ import { ref as dbRef, push, get, remove, query, limitToLast, orderByChild, onVa
 const jobFeedStore = useJobFeedStore();
 const currentJobFeed = computed(() => jobFeedStore.currentJobFeed);
 
+const db = useDatabase();
+const jobsRef = dbRef(db, 'users/u1/jobs');
+
 // Check if currentJobFeed is empty. If so, fetch the 10 most recent jobs from firebase.
 if (currentJobFeed.value.length === 0) {
-  const db = useDatabase();
-  const jobsRef = dbRef(db, 'users/u1/jobs');
   const recentJobsQuery = query(jobsRef, orderByChild('timestamp'), limitToLast(10));
 
   // Save jobs to vue store so we're not re-fetching them every time
@@ -117,7 +118,7 @@ const dialogDelete = ref(false);
 const jobTableHeaders = ref([
   { title: '', key: 'data-table-expand' },
   { title: 'Job Title', align: 'start', sortable: false, key: 'title' },
-  { title: 'Budget', key: 'budget' },
+  { title: 'Match', key: 'aiAnalysis.decision' },
   { title: 'Post Date', key: 'pubDate' },
   { title: '', key: 'actions', sortable: false },
 ]);
@@ -158,6 +159,9 @@ async function fetchUpworkJobs(){
 
     data.forEach((job => {
 
+      // convert date to more readable format
+      const date = new Date(job.pubDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+
       // @TODO this should probably happen server-side when we fetch the jobs
       const jobInfo = {
         guid: encodeURIComponent(job.guid),
@@ -170,7 +174,7 @@ async function fetchUpworkJobs(){
         feedback: {},
         title: job.title,
         url: encodeURIComponent(job.url),
-        pubDate: job.pubDate
+        pubDate: date
       }
 
       jobFeedStore.addJobToCurrentJobFeed(jobInfo);

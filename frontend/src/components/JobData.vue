@@ -21,7 +21,7 @@
 						<v-divider class="my-10"></v-divider>
 
 						<p class="label">Posted on:</p>
-						<p>{{ props.pubDate }}</p>
+						<p>{{ outputDate }}</p>
 
 						<p class="label">Budget:</p>
 						<p>{{ props.budget }}</p>
@@ -52,6 +52,9 @@ const props = defineProps([
 	'id',
 	'budget'
 ]);
+
+const dbDate = new Date(props.pubDate);
+const outputDate = dbDate.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 
 const analysis      = ref(props.analysis);
 const match         = ref(props.match);
