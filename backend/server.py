@@ -7,10 +7,11 @@ from dotenv import dotenv_values
 import re
 
 from langchain.chat_models import ChatOpenAI
-from langchain.prompts import ChatPromptTemplate
-from langchain.prompts.chat import SystemMessagePromptTemplate, HumanMessagePromptTemplate
+from langchain.prompts.chat import SystemMessagePromptTemplate, ChatPromptTemplate, HumanMessagePromptTemplate
 from langchain.output_parsers import PydanticOutputParser
-from langchain.pydantic_v1 import BaseModel, Field
+from langchain.schema import StrOutputParser
+from pydantic import BaseModel, Field
+from langchain.schema.runnable import RunnableMap, RunnablePassthrough
 
 config = dotenv_values('.env')
 openai.api_key = config["OPENAI_API_KEY"]
@@ -37,59 +38,125 @@ def generate_analysis():
 	"""
 
 	args = request.json
-	model = "gpt-3.5-turbo"
+	# model = "gpt-3.5-turbo"
+	model = "gpt-4"
 	llm = ChatOpenAI(temperature=0, model=model)
 
-	# Schema for how we want the AI model to return data to us
-	class Analysis(BaseModel):
-		my_experience: str = Field(description="The MY_EXPERIENCE analysis provided by AI model")
-		job_summary: str = Field(description="The JOB_SUMMARY analysis provided by AI model")
-		match_summary: str = Field(description="The MATCH_SUMMARY analysis provided by AI model")
-		match_decision: str = Field(description="The MATCH_DECISION determined by AI model")
+	currentJob = args["jobText3"]
 
-	parser = PydanticOutputParser(pydantic_object=Analysis)
-	format_instructions = parser.get_format_instructions()
+	# class Analysis(BaseModel):
+	# 	red_flag: bool = Field(description="Whether the job description violates any of the red flags")
+	# 	my_experience: str = Field(description="The MY_EXPERIENCE analysis provided by AI model")
+	# 	job_summary: str = Field(description="The JOB_SUMMARY analysis provided by AI model")
+	# 	match_summary: str = Field(description="The MATCH_SUMMARY analysis provided by AI model")
+	# 	match_decision: str = Field(description="The MATCH_DECISION determined by AI model")
 
-	user_prompt = f'''
-		MY EXPERIENCE: ### {args["aboutMeText"]} ###
-		JOB DESCRIPTION: ### {args["jobText"]} ###
-		JOB ID: ### {args["guid"]} ###
-		'''
+	# STEP 1: Immediately reject jobs that exhibit any "red flags"
 
-	system_prompt = """
-		You are an expert HR professional, highly skilled in evaluating whether or not an applicant would be a good fit for a job.
-		Your job is to take inputs provided by the user, and decide whether or not the job is a "match" for the applicant.
+	## Probably break this out into the user settings UI at some point...
+	redflags="""
+		- The job description is short (less than 100 words)
+		- The job description is vague, or not clear on specific requirements. For example: "I need a website" is too vague.
+		- The job description is short or vague, but only promises to provide more details once someone is hired.
+		- The job description is short or vague, and requires the candidate to sign an NDA/non-disclosure-agreement.
+		- The job description acknowledges a low budget, but promises either profit sharing or promises that it may lead to "future work"
+		- The job emphasizes urgency. For example if the deadline is "ASAP" then it is a red flag.
+		- The job description is written in a tone of voice that is excessively rude, bossy, or excessively negative
+	"""
 
-		You will be provided with two inputs: MY_EXPERIENCE, and JOB_DESCRIPTION.
+	redflags_chat_template = ChatPromptTemplate.from_messages([
+		SystemMessagePromptTemplate.from_template("""
+				Your job is to take a job description and analyze it against a series of 'red flags', to determine if the job description violates any of the red flags.
+				If the job description violates any of the red flags, return the following: (a description of the red flag it violated)
+				Otherwise, return the following: False
+				If you are not sure, return the following: False
 
-		When given a task, you will think it through step-by-step:
+				A list of 'red flags' are as follows:
+				{redflags}
+				""" ),
+		HumanMessagePromptTemplate.from_template("JOB DESCRIPTION: {job_description}")
+	])
 
-		First: Create a *bullet point summary* of MY_EXPERIENCE. Bullet points should only reference things that are explicitly declared within MY_EXPERIENCE. This *bullet point summary* will be referred to as the "APPLICANT_SUMMARY" in the following steps.
-		Second: Create a *bullet point summary* of the requirements being asked for in JOB_DESCRIPTION. Bullet points should only reference things that are explicitly declared within JOB_DESCRIPTION and should be ranked in order of importance. This *bullet point summary* will be referred to as the "JOB_SUMMARY" in the following steps.
-		Third: Compare the APPLICANT_SUMMARY and JOB_SUMMARY and determine whether or not the user is a strong candidate for this position, and explain your reasoning in 1 paragraph. This will be referred to as the "MATCH_SUMMARY" in the following steps.
-		Fourth: Based on the MATCH_SUMMARY you generated, decide on a classification: "Strong Candidate", "Weak Candidate", or "Not a Candidate". This will be referred to as the MATCH_DECISION.
+	isRedFlag = False
+	redflag_chain = redflags_chat_template | llm | StrOutputParser()
+	redflag_response = redflag_chain.invoke({"redflags": redflags, "job_description": currentJob})
+	isRedFlag = redflag_response
 
-		{format_instructions}
-		"""
+	print("------------------")
+	print("Red Flag analysis")
+	print(isRedFlag)
 
-	messages = [
-		SystemMessagePromptTemplate.from_template(system_prompt),
-		HumanMessagePromptTemplate.from_template(user_prompt)
-	]
+	if ( "False" != isRedFlag ):
+		print("Red Flag!! Exiting now...")
+		return f"No Match - Red Flag: {isRedFlag}"
 
-	template = ChatPromptTemplate(
-		messages=messages,
-	)
+	# else:
+	# 	return "Match"
 
-	try:
-		input = template.format_messages(user_prompt=user_prompt, format_instructions=format_instructions)
-		output = llm(input)
-		content = parser.parse(output.content)
-		return jsonify(content.dict())
+	# If no red flags, then:
+	# STEP 2: Technical Analysis of Job Description
 
-	except Exception as error:
-		print('Error generating analysis:', error)
-		return "Error generating output."
+	techanalysis_chat_template = ChatPromptTemplate.from_messages([
+		SystemMessagePromptTemplate.from_template("""
+			You are a senior developer & solutions architect. You are highly skilled at taking a job description and summarizing it in terms of
+			techinical requirements, and the skills that would be required to complete that task. Your summary should focus on explaining the
+			skills, concepts, and experience that a job candidate would need to have in order to fulfill the requirements in the job description.
+			You are allowed to make reasonable assumptions about things that may not be explicitly stated in the job description.
+
+			Your summary should be between 1 and 3 paragraphs.
+
+
+			"""),
+			HumanMessagePromptTemplate.from_template("JOB DESCRIPTION: {job_description}")
+			# If there are any major questions that would need to be answered in order for a developer to give a reasonable price quote, then
+			# make a list of those questions following your summary. You should include questions only if it is absolutely necessary, and no more than 5 questions.
+	])
+
+	techanalysis_chain = techanalysis_chat_template | llm | StrOutputParser()
+	techanalysis_response = techanalysis_chain.invoke({"job_description": currentJob})
+	techanalysis = techanalysis_response
+
+	print("------------------")
+	print("Tech analysis")
+	print(techanalysis)
+
+	# STEP 3: Analyze strength of match based on user qualifications
+
+	match_chat_template = ChatPromptTemplate.from_messages([
+		SystemMessagePromptTemplate.from_template("""
+			You are a senior developer & solutions architect with extensive experience leading a team of developers, and are highly skilled at evaluating
+			whether or not a developer would be a good fit for a given job. You will be provided with a job description that includes technical requirements.
+			You will also be provided with a description of a developer's experience, strengths, and interests.
+
+			Your goal is to analyze whether or not the candidate is a good fit for the job description.
+			You will provide a 1-paragraph summary of your analysis, and will classify your analysis as
+			one of 3 categories: "Strong Match", "Weak Match", or "Not a Match".
+
+			The Job Description is provided below:
+			{techanalysis}
+			"""),
+		HumanMessagePromptTemplate.from_template("Candidate Profile: {candidate_profile}")
+	])
+
+	print("------------------")
+	print("MATCH TEMPLATE")
+	print(match_chat_template)
+
+	match_chain = match_chat_template | llm | StrOutputParser()
+	match_response = match_chain.invoke({"techanalysis": techanalysis, "candidate_profile": args["aboutMeText"]})
+	match = match_response
+
+	print("MATCH")
+	print(match)
+
+	return match
+
+	# try:
+	# 	return jsonify(content.dict())
+
+	# except Exception as error:
+	# 	print('Error generating analysis:', error)
+	# 	return "Error generating output."
 
 
 @app.route("/fetch-upwork-jobs-rss")
