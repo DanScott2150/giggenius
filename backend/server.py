@@ -8,10 +8,9 @@ import re
 
 from langchain.chat_models import ChatOpenAI
 from langchain.prompts.chat import SystemMessagePromptTemplate, ChatPromptTemplate, HumanMessagePromptTemplate
-from langchain.output_parsers import PydanticOutputParser
 from langchain.schema import StrOutputParser
+from langchain.output_parsers import PydanticOutputParser
 from pydantic import BaseModel, Field
-from langchain.schema.runnable import RunnableMap, RunnablePassthrough
 
 config = dotenv_values('.env')
 openai.api_key = config["OPENAI_API_KEY"]
@@ -42,14 +41,14 @@ def generate_analysis():
 	model = "gpt-4"
 	llm = ChatOpenAI(temperature=0, model=model)
 
-	currentJob = args["jobText3"]
+	currentJob = args["jobText"]
 
-	# class Analysis(BaseModel):
-	# 	red_flag: bool = Field(description="Whether the job description violates any of the red flags")
-	# 	my_experience: str = Field(description="The MY_EXPERIENCE analysis provided by AI model")
-	# 	job_summary: str = Field(description="The JOB_SUMMARY analysis provided by AI model")
-	# 	match_summary: str = Field(description="The MATCH_SUMMARY analysis provided by AI model")
-	# 	match_decision: str = Field(description="The MATCH_DECISION determined by AI model")
+	# Create Pydantic object that contains match_decision and match_summary
+	class MatchAnalysis(BaseModel):
+		matchSummary: str = Field(description="The summary explaining the match between user experience and job summary")
+		matchDecision: str = Field(description="The strength of the match between user experience and job summary: Strong Match/Weak Match/Not a Match")
+
+	matchParser = PydanticOutputParser(pydantic_object=MatchAnalysis)
 
 	# STEP 1: Immediately reject jobs that exhibit any "red flags"
 
@@ -66,7 +65,7 @@ def generate_analysis():
 
 	redflags_chat_template = ChatPromptTemplate.from_messages([
 		SystemMessagePromptTemplate.from_template("""
-				Your job is to take a job description and analyze it against a series of 'red flags', to determine if the job description violates any of the red flags.
+				Your task is to take a job description and analyze it against a series of 'red flags', to determine if the job description violates any of the red flags.
 				If the job description violates any of the red flags, return the following: (a description of the red flag it violated)
 				Otherwise, return the following: False
 				If you are not sure, return the following: False
@@ -82,16 +81,18 @@ def generate_analysis():
 	redflag_response = redflag_chain.invoke({"redflags": redflags, "job_description": currentJob})
 	isRedFlag = redflag_response
 
-	print("------------------")
-	print("Red Flag analysis")
-	print(isRedFlag)
+	# print("------------------")
+	# print("Red Flag analysis")
+	# print(isRedFlag)
 
 	if ( "False" != isRedFlag ):
-		print("Red Flag!! Exiting now...")
-		return f"No Match - Red Flag: {isRedFlag}"
-
-	# else:
-	# 	return "Match"
+		redflag_analysis = {
+			"match_decision": "Not a Match",
+			"match_summary": f"Rejected for Red Flag: {isRedFlag}",
+			"job_summary": currentJob
+			},
+		# print(redflag_analysis)
+		return jsonify(redflag_analysis)
 
 	# If no red flags, then:
 	# STEP 2: Technical Analysis of Job Description
@@ -108,17 +109,19 @@ def generate_analysis():
 
 			"""),
 			HumanMessagePromptTemplate.from_template("JOB DESCRIPTION: {job_description}")
+
+			#### Maybe add following back to prompt:
 			# If there are any major questions that would need to be answered in order for a developer to give a reasonable price quote, then
 			# make a list of those questions following your summary. You should include questions only if it is absolutely necessary, and no more than 5 questions.
 	])
 
-	techanalysis_chain = techanalysis_chat_template | llm | StrOutputParser()
+	techanalysis_chain = techanalysis_chat_template | llm | StrOutputParser() # Don't use Pydantic parser since this is only part of the final output
 	techanalysis_response = techanalysis_chain.invoke({"job_description": currentJob})
 	techanalysis = techanalysis_response
 
-	print("------------------")
-	print("Tech analysis")
-	print(techanalysis)
+	# print("------------------")
+	# print("Tech analysis")
+	# print(techanalysis)
 
 	# STEP 3: Analyze strength of match based on user qualifications
 
@@ -129,27 +132,37 @@ def generate_analysis():
 			You will also be provided with a description of a developer's experience, strengths, and interests.
 
 			Your goal is to analyze whether or not the candidate is a good fit for the job description.
-			You will provide a 1-paragraph summary of your analysis, and will classify your analysis as
-			one of 3 categories: "Strong Match", "Weak Match", or "Not a Match".
+			You will provide a 1-paragraph summary of your analysis, referred to as the "match summary".
+			You will then also provide a final "match decision" based on how strong of a match the candidate is for the job: "Strong Match", "Weak Match", or "Not a Match".
 
 			The Job Description is provided below:
 			{techanalysis}
+
+			Format Instructions:
+			{format_instructions}
 			"""),
 		HumanMessagePromptTemplate.from_template("Candidate Profile: {candidate_profile}")
 	])
 
-	print("------------------")
-	print("MATCH TEMPLATE")
-	print(match_chat_template)
+	format_instructions = matchParser.get_format_instructions()
 
-	match_chain = match_chat_template | llm | StrOutputParser()
-	match_response = match_chain.invoke({"techanalysis": techanalysis, "candidate_profile": args["aboutMeText"]})
-	match = match_response
+	match_chain = match_chat_template | llm | matchParser
 
-	print("MATCH")
-	print(match)
+	match_response = match_chain.invoke({
+		"techanalysis": techanalysis,
+		"candidate_profile": args["aboutMeText"],
+		"format_instructions": format_instructions
+		})
 
-	return match
+	analysis = {
+		"match_decision": match_response.matchDecision,
+		"match_summary": match_response.matchSummary,
+		"job_summary": currentJob
+	},
+
+	print(analysis)
+	return jsonify(analysis)
+
 
 	# try:
 	# 	return jsonify(content.dict())
