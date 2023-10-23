@@ -1,38 +1,33 @@
 <template>
+	<v-container>
+		<v-row>
+			<v-col cols="8">
+				<p class="label">Job Information:</p>
+				<div v-html="props.description"></div>
+			</v-col>
+			<v-col cols="4">
 
-	<v-card>
+				<p class="label">Match:</p>
+				<div v-html="match"></div>
 
-		<v-card-text>
-			<v-container>
-				<v-row>
-					<v-col cols="8">
-						<p class="label">Job Information:</p>
-						<div v-html="props.description"></div>
-					</v-col>
-					<v-col cols="4">
+				<p class="label">AI Analysis:</p>
+				<div v-if="isLoading">
+					<v-progress-circular indeterminate></v-progress-circular>
+				</div>
+				<div v-html="analysis"></div>
+				<ButtonComponent label="AI Analyze" :action="generateAnalysis" />
 
-						<p class="label">Match:</p>
-						<div v-html="match"></div>
+				<v-divider class="my-10"></v-divider>
 
-						<p class="label">AI Analysis:</p>
-						<div v-html="analysis"></div>
-						<ButtonComponent label="AI Analyze" :action="generateAnalysis" />
+				<p class="label">Posted on:</p>
+				<p>{{ outputDate }}</p>
 
-						<v-divider class="my-10"></v-divider>
+				<p class="label">Budget:</p>
+				<p>{{ props.budget }}</p>
 
-						<p class="label">Posted on:</p>
-						<p>{{ outputDate }}</p>
-
-						<p class="label">Budget:</p>
-						<p>{{ props.budget }}</p>
-
-					</v-col>
-				</v-row>
-			</v-container>
-
-		</v-card-text>
-	</v-card>
-
+			</v-col>
+		</v-row>
+	</v-container>
 </template>
 
 <script setup>
@@ -61,6 +56,7 @@ const match         = ref(props.match);
 const jobText       = ref(props.description);
 const proposalStore = useProposalStore();
 const aboutMeText   = ref(proposalStore.aboutMeText);
+const isLoading     = ref(false);
 
 /**
  * Generates the AI analysis for a given job. API call to flask server which connects to OpenAI.
@@ -71,24 +67,35 @@ const aboutMeText   = ref(proposalStore.aboutMeText);
  */
 const generateAnalysis = async () => {
 
+	isLoading.value = true;
+
 	const url = "http://127.0.0.1:5000/generate-analysis";
 
-	const response = await fetch(url, {
-		method: "POST",
-		headers: {
-			'Content-Type': 'application/json',
-		},
-		body: JSON.stringify({
-			jobText: jobText.value,
-			aboutMeText: aboutMeText.value,
-			guid: props.guid
-		})
-	} );
+	try {
+		const response = await fetch(url, {
+			method: "POST",
+			headers: {
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify({
+				jobText: jobText.value,
+				aboutMeText: aboutMeText.value,
+				guid: props.guid
+			})
+		} );
 
-	const data = await response.json();
-	console.log(data);
-	analysis.value = data["match_summary"] || "Error generating output.";
-	match.value = data["match_decision"] || "Error generating output.";
+		const data = await response.json();
+		console.log(data);
+		analysis.value = data["match_summary"] || "Error generating output.";
+		match.value = data["match_decision"] || "";
+	} catch (error) {
+		console.error(error);
+		analysis.value = "There was an error generating the analysis. Please try again.";
+		match.value = "";
+	} finally {
+		isLoading.value = false;
+	}
+
 
 }
 

@@ -92,7 +92,7 @@ def generate_analysis():
 			"job_summary": currentJob
 			},
 		# print(redflag_analysis)
-		return jsonify(redflag_analysis)
+		return jsonify(redflag_analysis[0])
 
 	# If no red flags, then:
 	# STEP 2: Technical Analysis of Job Description
@@ -161,7 +161,7 @@ def generate_analysis():
 	},
 
 	print(analysis)
-	return jsonify(analysis)
+	return jsonify(analysis[0])
 
 
 	# try:
