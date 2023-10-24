@@ -26,7 +26,7 @@
 			item-value="title"
 			show-expand
 			:headers="jobTableHeaders"
-			:items="currentJobFeed"
+			:items="jobFeedStore.currentJobFeed"
 			:sort-by="[{ key: 'pubDate', order: 'asc' }]"
 			>
 		</JobDataTable>
@@ -38,7 +38,7 @@
 <script setup>
 import axios from 'axios';
 import { useJobFeedStore } from '../store';
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import JobDataTable from './JobDataTable.vue';
 
 // Setup connection to Firebase Realtime Database
@@ -46,28 +46,10 @@ import { useDatabase } from 'vuefire'
 import { ref as dbRef, push, get, query, limitToLast, orderByChild, onValue } from 'firebase/database';
 
 const jobFeedStore = useJobFeedStore();
-const currentJobFeed = computed(() => jobFeedStore.currentJobFeed);
+const jobFeed = computed(() => jobFeedStore.currentJobFeed);
 
 const db = useDatabase();
 const jobsRef = dbRef(db, 'users/u1/jobs');
-
-// Check if currentJobFeed is empty. If so, fetch the 10 most recent jobs from firebase.
-if (currentJobFeed.value.length === 0) {
-  const recentJobsQuery = query(jobsRef, orderByChild('timestamp'), limitToLast(10));
-
-  // Save jobs to vue store so we're not re-fetching them every time
-  onValue(recentJobsQuery, snapshot => {
-    const jobsArray = [];
-    snapshot.forEach(childSnapshot => {
-      const jobData = childSnapshot.val();
-      const jobId = childSnapshot.key;
-      jobData.id = jobId;
-      jobsArray.push(jobData);
-    });
-
-    jobFeedStore.currentJobFeed = jobsArray;
-  });
-}
 
 const expanded = ref([]);
 
@@ -78,6 +60,19 @@ const jobTableHeaders = ref([
   { title: 'Post Date', key: 'pubDate' },
   { title: '', key: 'actions', sortable: false },
 ]);
+
+
+onMounted(async() => {
+  console.log("mounted");
+  if (jobFeedStore.currentJobFeed.length === 0) {
+    console.log("empty");
+    await jobFeedStore.populateCurrentJobFeed()
+    console.log("JobFeed");
+    console.log(jobFeedStore.currentJobFeed);
+  }
+
+  console.log(jobFeedStore.currentJobFeed);
+});
 
 
 /**

@@ -8,13 +8,15 @@
 			<v-col cols="4">
 
 				<p class="label">Match:</p>
-				<div v-html="match"></div>
+				<div v-if="props.aiAnalysis.decision" v-html="match"></div>
+				<div v-else>Loading...</div>
 
 				<p class="label">AI Analysis:</p>
 				<div v-if="isLoading">
 					<v-progress-circular indeterminate></v-progress-circular>
 				</div>
-				<div v-html="analysis"></div>
+				<div v-if="props.aiAnalysis.decision"  v-html="analysis"></div>
+				<div v-else>Loading...</div>
 				<ButtonComponent label="AI Analyze" :action="generateAnalysis" />
 
 				<v-divider class="my-10"></v-divider>
@@ -31,10 +33,12 @@
 </template>
 
 <script setup>
-import { ref, defineProps, watch } from 'vue';
+import { ref, defineProps, watch, onMounted, onUpdated, onUnmounted } from 'vue';
 import { ref as dbRef, getDatabase, update } from 'firebase/database';
 import { useProposalStore } from '../store';
 import ButtonComponent from './base/Button2.vue'
+
+console.log("setup");
 
 const props = defineProps([
 	'title',
@@ -47,6 +51,23 @@ const props = defineProps([
 	'id',
 	'budget'
 ]);
+
+// Add console log to onMount() vue hook
+onMounted(() => {
+	console.log("mount");
+})
+
+// Add console log to onUpdated() vue hook
+onUpdated(() => {
+	console.log("update");
+})
+
+// Add console log to onUnmounted() vue hook
+onUnmounted(() => {
+	console.log("unmount");
+})
+
+// console.log(props);
 
 const dbDate = new Date(props.pubDate);
 const outputDate = dbDate.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
