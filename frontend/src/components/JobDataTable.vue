@@ -2,12 +2,10 @@
 	<v-data-table
 		:headers="props.headers"
 		:items="props.items"
-		item-key="id"
+		item-key="guid"
 		class="elevation-1"
 		:sort-by="props.sortBy"
 	>
-
-
 
 		<template v-slot:top>
 			<v-toolbar flat>
@@ -56,7 +54,6 @@ import { ref, defineProps, watch } from 'vue';
 import { ref as dbRef, remove } from 'firebase/database';
 import { useDatabase } from 'vuefire';
 import JobData from './JobData.vue';
-import { useProposalStore } from '../store';
 
 const props = defineProps({
   headers: Array,

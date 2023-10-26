@@ -1,3 +1,4 @@
+import { ref, reactive, watch } from 'vue';
 import { defineStore } from 'pinia';
 import { getDatabase, ref as dbRef, get, set, query, limitToLast, orderByChild, onValue } from "firebase/database";
 
@@ -55,29 +56,25 @@ export const useProposalStore = defineStore('proposal', {
   }
 });
 
-export const useJobFeedStore = defineStore('jobFeed', {
-  state: () => ({
-      currentJobFeed: [],
-  }),
-  actions: {
-    updateCurrentJobFeed(newJobFeed){
-      this.currentJobFeed = newJobFeed;
-    },
-    addJobToCurrentJobFeed(newJob){
-      this.currentJobFeed.push(newJob);
-    },
-    // If the currentJobFeed is empty, populate it with the most recent 10 entries from firebase
-    async populateCurrentJobFeed(){
-      return new Promise((resolve, reject) => {
-        console.log("store.js populate current job feed");
-        const db = getDatabase();
-        const jobsRef = dbRef(db, 'users/u1/jobs');
-        const recentJobsQuery = query(jobsRef, orderByChild('timestamp'), limitToLast(4));
+export const useJobFeedStore = defineStore('jobFeed', () => {
 
-        // Save jobs to vue store so we're not re-fetching them every time
-        onValue(recentJobsQuery, snapshot => {
-          console.log("onValue");
-          const jobsArray = [];
+  const currentJobFeed = reactive([]);
+
+  function addJobToCurrentJobFeed(newJob){
+    this.currentJobFeed.push(newJob);
+  }
+
+  async function populateCurrentJobFeed() {
+
+    return new Promise((resolve, reject) => {
+
+      const db = getDatabase();
+      const jobsRef = dbRef(db, 'users/u1/jobs');
+      const recentJobsQuery = query(jobsRef, orderByChild('pubDate'), limitToLast(10));
+
+      get(recentJobsQuery)
+        .then(snapshot => {
+          let jobsArray = [];
           snapshot.forEach(childSnapshot => {
             const jobData = childSnapshot.val();
             const jobId = childSnapshot.key;
@@ -85,71 +82,15 @@ export const useJobFeedStore = defineStore('jobFeed', {
             jobsArray.push(jobData);
           });
 
-        this.currentJobFeed = jobsArray;
-        console.log(this.currentJobFeed)
-        resolve();
-
-        },
-        error => {
+          this.currentJobFeed = jobsArray;
+          resolve(this.currentJobFeed);
+        })
+        .catch(error => {
           reject(error);
         });
-    })
-    .then(() => {
-      console.log("promise resolved");
-      this.generateAnalysis(this.currentJobFeed)
-    })
-    },
-
-
-    async generateAnalysis(jobs) {
-      console.log("store.js generate analysis");
-      // console.log(job);
-      // return;
-      const url = "http://127.0.0.1:5000/generate-analysis";
-
-      jobs.forEach(async job => {
-        console.log("in job");
-        console.log(job)
-        try {
-          const response = await fetch(url, {
-            method: "POST",
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              jobText: job.description,
-              aboutMeText: useProposalStore.aboutMeText,
-              guid: job.guid
-            })
-          });
-
-          const data = await response.json();
-          console.log(data);
-
-          // Update the job with the received analysis.
-          const updatedJob = { ...job, decision: data.match_decision || "" };
-
-          // Update the Firebase Realtime Database.
-          const db = getDatabase();
-          await set(ref(db, `users/u1/jobs/${job.guid}`), updatedJob);
-
-          // Update the local state.
-          const jobIndex = this.jobs.findIndex(j => j.guid === job.guid);
-          this.jobs[jobIndex] = updatedJob;
-
-        } catch (error) {
-          console.error(error);
-          // You might want to handle the error more gracefully, maybe update the job with an error status.
-        }
-      })
-    }
-
-
-
-    // populateJobs(newJobs){
-    //   this.jobs = [];
-    //   this.jobs = newJobs;
-    // }
+    });
   }
-});
 
+  return { currentJobFeed, addJobToCurrentJobFeed, populateCurrentJobFeed };
+
+});

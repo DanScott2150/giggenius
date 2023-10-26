@@ -26,7 +26,7 @@
 			item-value="title"
 			show-expand
 			:headers="jobTableHeaders"
-			:items="jobFeedStore.currentJobFeed"
+			:items="jobFeed.currentJobFeed"
 			:sort-by="[{ key: 'pubDate', order: 'asc' }]"
 			>
 		</JobDataTable>
@@ -38,19 +38,14 @@
 <script setup>
 import axios from 'axios';
 import { useJobFeedStore } from '../store';
-import { ref, computed, onMounted } from 'vue';
+import { ref, onMounted } from 'vue';
 import JobDataTable from './JobDataTable.vue';
 
 // Setup connection to Firebase Realtime Database
 import { useDatabase } from 'vuefire'
-import { ref as dbRef, push, get, query, limitToLast, orderByChild, onValue } from 'firebase/database';
+import { ref as dbRef, push, get } from 'firebase/database';
 
-const jobFeedStore = useJobFeedStore();
-const jobFeed = computed(() => jobFeedStore.currentJobFeed);
-
-const db = useDatabase();
-const jobsRef = dbRef(db, 'users/u1/jobs');
-
+const jobFeed = useJobFeedStore();
 const expanded = ref([]);
 
 const jobTableHeaders = ref([
@@ -61,71 +56,75 @@ const jobTableHeaders = ref([
   { title: '', key: 'actions', sortable: false },
 ]);
 
-
+/**
+ * Check if current job feed (state) is empty.
+ * If so, populate with 10 most recent entries saved in database
+ */
 onMounted(async() => {
-  console.log("mounted");
-  if (jobFeedStore.currentJobFeed.length === 0) {
-    console.log("empty");
-    await jobFeedStore.populateCurrentJobFeed()
-    console.log("JobFeed");
-    console.log(jobFeedStore.currentJobFeed);
+  if (jobFeed.currentJobFeed.length === 0) {
+    await jobFeed.populateCurrentJobFeed();
   }
-
-  console.log(jobFeedStore.currentJobFeed);
 });
 
 
 /**
- * Fetch list of jobs from Upwork RSS feed.
- *
- * List of jobs are saved to currentJobFeed{} and displayed on this page,
- * and then are also saved to our firebaseDB for display on 'All Jobs' page.
+ * On user click, fetch the most recent 10 listings on upwork (via RSS)
+ * And then add them to the current job feed (state)
  *
  */
 async function fetchUpworkJobs(){
-  try{
-    const response = await axios.get('http://127.0.0.1:5000/fetch-upwork-jobs-rss')
-    const data = response.data;
 
-    // Empty out existing currentJobFeed store
-    jobFeedStore.updateCurrentJobFeed([]);
+  // Empty out existing currentJobFeed store
+  jobFeed.currentJobFeed = [];
 
-    data.forEach((job => {
+  const response = await axios.get('http://127.0.0.1:5000/fetch-upwork-jobs-rss');
 
-      // convert date to more readable format
-      const date = new Date(job.pubDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  return new Promise((resolve, reject) => {
 
-      // @TODO this should probably happen server-side when we fetch the jobs
-      const jobInfo = {
-        guid: encodeURIComponent(job.guid),
-        aiAnalysis: {
-          decision: "",
-          summary: ""
-        },
-        budget: job.budget,
-        description: job.description,
-        feedback: {},
-        title: job.title,
-        url: encodeURIComponent(job.url),
-        pubDate: date
-      }
+    try{
+      const data = response.data;
 
-      jobFeedStore.addJobToCurrentJobFeed(jobInfo);
+      data.forEach((job => {
 
-      // In addition to adding to currentFeed store, push job to firebase db for user
-      addJobForUser('u1', jobInfo )
+        // convert date to more readable format
+        const date = new Date(job.pubDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 
-    }))
+        const jobInfo = {
+          guid: encodeURIComponent(job.guid),
+          aiAnalysis: {
+            decision: "",
+            summary: ""
+          },
+          budget: job.budget,
+          description: job.description,
+          feedback: {},
+          title: job.title,
+          url: encodeURIComponent(job.url),
+          pubDate: date
+        }
 
-  } catch (error){
-    console.error("Error fetching: ", error);
-  }
+        jobFeed.addJobToCurrentJobFeed(jobInfo);
+
+        // In addition to adding to currentFeed store, push job to firebase db for user
+        addJobForUser('u1', jobInfo )
+
+      }))
+
+      resolve();
+
+    } catch (error){
+      console.error("Error fetching: ", error);
+      reject(error);
+    }
+  })
 }
 
 /**
- * Add a job to firebase db for a given user.
+ * Add a job to firebase db for a given user. Should probably happen at store-level instead of in component
  */
 async function addJobForUser(userId, newJob) {
+
+  const db = useDatabase();
 
   const jobRef = dbRef(db, `users/${userId}/jobs`);
   const snapshot = await get(jobRef);
