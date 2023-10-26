@@ -8,14 +8,14 @@
 			<v-col cols="4">
 
 				<p class="label">Match:</p>
-				<div v-if="props.aiAnalysis.decision" v-html="match"></div>
+				<div v-if="props.match" v-html="match"></div>
 				<div v-else>Loading...</div>
 
 				<p class="label">AI Analysis:</p>
 				<div v-if="isLoading">
 					<v-progress-circular indeterminate></v-progress-circular>
 				</div>
-				<div v-if="props.aiAnalysis.decision"  v-html="analysis"></div>
+				<div v-if="props.match"  v-html="analysis"></div>
 				<div v-else>Loading...</div>
 				<ButtonComponent label="AI Analyze" :action="generateAnalysis" />
 

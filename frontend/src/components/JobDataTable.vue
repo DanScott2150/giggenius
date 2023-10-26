@@ -1,10 +1,13 @@
 <template>
 	<v-data-table
+		v-model:expanded="expanded"
 		:headers="props.headers"
 		:items="props.items"
+		item-value="title"
 		item-key="guid"
 		class="elevation-1"
 		:sort-by="props.sortBy"
+		show-expand
 	>
 
 		<template v-slot:top>
@@ -54,6 +57,7 @@ import { ref, defineProps, watch } from 'vue';
 import { ref as dbRef, remove } from 'firebase/database';
 import { useDatabase } from 'vuefire';
 import JobData from './JobData.vue';
+const expanded = ref([]);
 
 const props = defineProps({
   headers: Array,

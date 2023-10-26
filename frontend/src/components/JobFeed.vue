@@ -21,10 +21,6 @@
     <v-divider></v-divider>
 
     <JobDataTable
-			v-model:expanded="expanded"
-			class="elevation-1"
-			item-value="title"
-			show-expand
 			:headers="jobTableHeaders"
 			:items="jobFeed.currentJobFeed"
 			:sort-by="[{ key: 'pubDate', order: 'asc' }]"
@@ -46,7 +42,6 @@ import { useDatabase } from 'vuefire'
 import { ref as dbRef, push, get } from 'firebase/database';
 
 const jobFeed = useJobFeedStore();
-const expanded = ref([]);
 
 const jobTableHeaders = ref([
   { title: '', key: 'data-table-expand' },
