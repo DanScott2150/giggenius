@@ -15,7 +15,6 @@ import 'vuetify/dist/vuetify.min.css';
 
 // Top-level (page) components
 import App from './App.vue'
-import JobFeed from './components/JobFeed.vue';
 import AllJobs from './components/AllJobs.vue';
 import GenerateProposal from './components/GenerateProposal.vue';
 import SettingsPage from './components/SettingsPage.vue';
@@ -38,9 +37,8 @@ app.use( vuetify );
 
 const routes = [
     { path: '/generate-proposal', component: GenerateProposal, name: 'Generate Proposal' },
-    { path: '/all-jobs', component: AllJobs, name: 'All Jobs' },
+    { path: '/', component: AllJobs, name: 'All Jobs' },
     { path: '/settings', component: SettingsPage, name: 'Settings' },
-    { path: '/', component: JobFeed, name: 'Job Feed' }
 ];
 
 const router = createRouter({

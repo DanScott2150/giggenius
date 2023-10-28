@@ -17,6 +17,8 @@
 				</div>
 				<div v-if="props.match"  v-html="analysis"></div>
 				<div v-else>Loading...</div>
+
+				<p>{{ props.id }}</p>
 				<ButtonComponent label="AI Analyze" :action="generateAnalysis" />
 
 				<v-divider class="my-10"></v-divider>

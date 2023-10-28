@@ -2,7 +2,6 @@ import { reactive } from 'vue';
 import { defineStore } from 'pinia';
 import { getDatabase, ref as dbRef, get, query, limitToLast, orderByChild } from "firebase/database";
 
-
 export const useJobFeedStore = defineStore('jobFeed', () => {
 
   const currentJobFeed = reactive([]);
@@ -17,16 +16,21 @@ export const useJobFeedStore = defineStore('jobFeed', () => {
 
       const db = getDatabase();
       const jobsRef = dbRef(db, 'users/u1/jobs');
-      const recentJobsQuery = query(jobsRef, orderByChild('pubDate'), limitToLast(10));
+      const recentJobsQuery = query(jobsRef, orderByChild('pubDate'), limitToLast(50),);
 
       get(recentJobsQuery)
         .then(snapshot => {
           let jobsArray = [];
           snapshot.forEach(childSnapshot => {
             const jobData = childSnapshot.val();
-            const jobId = childSnapshot.key;
-            jobData.id = jobId;
-            jobsArray.push(jobData);
+
+            // Current job feed should only include jobs that are a match
+            if (jobData.aiAnalysis.decision === 'Strong Candidate' || jobData.aiAnalysis.decision === 'Weak Match'){
+              const jobId = childSnapshot.key;
+              jobData.id = jobId;
+              jobsArray.push(jobData);
+            }
+
           });
 
           this.currentJobFeed = jobsArray;

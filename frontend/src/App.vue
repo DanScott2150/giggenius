@@ -29,10 +29,7 @@
 
       <v-list class="py-5 px-3">
 
-        <router-link to="/" class="nav-item" active-class="active-tab">
-          <v-list-item link title="Current Job Feed" prepend-icon="mdi-format-list-bulleted"></v-list-item>
-        </router-link>
-        <router-link to="/all-jobs">
+        <router-link to="/">
           <v-list-item link title="View All Jobs" prepend-icon="mdi-briefcase-outline"></v-list-item>
         </router-link>
         <router-link to="/generate-proposal">

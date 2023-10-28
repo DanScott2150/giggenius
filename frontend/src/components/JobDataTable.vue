@@ -1,12 +1,12 @@
 <template>
 	<v-data-table
 		v-model:expanded="expanded"
-		:headers="props.headers"
+		:headers="jobTableHeaders"
 		:items="props.items"
 		item-value="title"
 		item-key="guid"
 		class="elevation-1"
-		:sort-by="props.sortBy"
+		:sort-by="[{ key: 'pubDate', order: 'desc' }]"
 		show-expand
 	>
 
@@ -26,6 +26,10 @@
 				</v-dialog>
 			</v-toolbar>
 		</template>
+
+		<template v-slot:item.pubDate="{ item }">
+      		{{ item.pubDate }}
+    	</template>
 
 		<template v-slot:item.actions="{ item }">
 			<v-icon size="small" @click="deleteItem(item)">mdi-delete</v-icon>
@@ -64,6 +68,15 @@ const props = defineProps({
   items: Array,
   sortBy: Array,
 })
+
+const jobTableHeaders = ref([
+	{ title: '', key: 'data-table-expand' },
+	{ title: 'Job Title', align: 'start', sortable: false, key: 'title' },
+	{ title: 'Match', key: 'aiAnalysis.decision' },
+	{ title: 'Post Date', key: 'pubDate', sortable: true},
+	{ title: '', key: 'actions', sortable: false },
+]);
+
 
 const db = useDatabase();
 const toDelete = ref({});
