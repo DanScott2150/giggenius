@@ -57,7 +57,7 @@
 
 <script setup>
   import { ref } from "vue";
-  import { useProposalStore } from '../store';
+  import { useProposalStore } from '@/stores/proposalStore';
 
   const proposalStore = useProposalStore();
   const aboutMeText   = ref(proposalStore.aboutMeText);

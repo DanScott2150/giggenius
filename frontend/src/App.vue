@@ -63,7 +63,7 @@
 <script setup>
 
 import { onMounted } from "vue";
-import { useProposalStore } from './store';
+import { useProposalStore } from '@/stores/proposalStore';
 
 // When App loads, fetch AboutMeText from Firebase DB
 onMounted(async () => {

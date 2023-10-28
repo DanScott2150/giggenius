@@ -33,7 +33,7 @@
 
 <script setup>
 import axios from 'axios';
-import { useJobFeedStore } from '../store';
+import { useJobFeedStore } from '@/stores/jobFeedStore';
 import { ref, onMounted } from 'vue';
 import JobDataTable from './JobDataTable.vue';
 

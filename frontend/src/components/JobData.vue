@@ -35,7 +35,7 @@
 <script setup>
 import { ref, defineProps, watch, onMounted, onUpdated, onUnmounted } from 'vue';
 import { ref as dbRef, getDatabase, update } from 'firebase/database';
-import { useProposalStore } from '../store';
+import { useProposalStore } from '@/stores/proposalStore';
 import ButtonComponent from './base/Button2.vue'
 
 console.log("setup");
